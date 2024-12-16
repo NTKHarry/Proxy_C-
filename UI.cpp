@@ -3,12 +3,13 @@
 #include <unordered_map>
 #include <string>
 using namespace std;
-
-HWND hTextbox3, hSearchBar, hButtonAdd;
+// 
+HWND hTextbox3, hSearchBar, hButtonAdd, hButtonStart, hButtonStop;
 
 // Khai báo unordered_map để lưu các dòng đã được thêm vào
 unordered_map<string, bool> addedStrings;
 
+//   
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
     switch (msg) {
@@ -19,7 +20,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_COMMAND: {
         // Kiểm tra nếu nút Add (ID của hButtonAdd) được nhấn
         if ((HWND)lp == hButtonAdd) {
-            cout << "ok";
             // Lấy văn bản từ ô tìm kiếm (hSearchBar)
             int len = GetWindowTextLength(hSearchBar) + 1;
             char *text = new char[len];
@@ -50,9 +50,62 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             }
             else {
                 // Nếu văn bản đã tồn tại trong unordered_map, không làm gì cả
-                cout << "Dòng văn bản đã tồn tại!" << endl;
+                cout << "The path was existed!" << endl;
                 delete[] text;
             }
+        }
+
+        if ((HWND)lp == hButtonStart) {
+            const char* cppPath = ".\\proxy_server.cpp";
+            const char* exePath = ".\\proxy_server.exe";
+            
+            // Compile file cpp thành file exe
+            string compileCommand = "g++ -o " + (string)exePath + " " + (string)cppPath + "-lws2_32";
+            STARTUPINFOA si = { sizeof(si) };
+            PROCESS_INFORMATION pi;
+
+            // Chạy lệnh compile
+            if (CreateProcessA(
+                NULL, // No module name (use command line)
+                (LPSTR)compileCommand.c_str(), // Command line
+                NULL, // Process handle not inheritable
+                NULL, // Thread handle not inheritable
+                FALSE, // Set handle inheritance to FALSE
+                CREATE_NO_WINDOW, // No creation flags
+                NULL, // Use parent's environment block
+                NULL, // Use parent's starting directory
+                &si, // Pointer to STARTUPINFO structure
+                &pi // Pointer to PROCESS_INFORMATION structure
+            )) {
+            WaitForSingleObject(pi.hProcess, INFINITE);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+
+            // Chạy file exe
+            STARTUPINFOA siExe = { sizeof(STARTUPINFOA) };
+            PROCESS_INFORMATION piExe;
+
+            if (CreateProcessA(
+                NULL, // No module name (use command line)
+                (LPSTR)exePath, // Command line
+                NULL, // Process handle not inheritable
+                NULL, // Thread handle not inheritable
+                FALSE, // Set handle inheritance to FALSE
+                0, // No creation flags
+                NULL, // Use parent's environment block
+                NULL, // Use parent's starting directory
+                &siExe, // Pointer to STARTUPINFO structure
+                &piExe // Pointer to PROCESS_INFORMATION structure
+            )) {
+                CloseHandle(piExe.hProcess);
+                CloseHandle(piExe.hThread);
+            }
+            else {
+                MessageBoxA(hwnd, "Cannot run the exe file", "Error", MB_OK | MB_ICONERROR);
+            }
+        } 
+        else {
+            MessageBoxA(hwnd, "Cannot compile the cpp file", "Error", MB_OK | MB_ICONERROR);
         }
         break;
     }
